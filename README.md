@@ -13,3 +13,37 @@ We sourced  [this particular dataset](https://www.kaggle.com/mandalravi/loan-pre
 The loan here is one where customers should pay off all of their loan debt in just one time by the end of the term, instead of an installment schedule. Of course, they could pay off earlier than their pay schedule.
 
 ## Data Content
+Categorical features(Nominal): These variables are categorical without order or ranking. Below are the list of such variables in this data:
+
+-   Gender,
+    
+-   Married,
+    
+-   Self_Employed,
+    
+-   Credit_History
+    
+Categorical features(Ordinal): These variables in categorical in nature having some order involved.
+
+-   Dependents,
+    
+-   Education,
+    
+-   Property_Area
+
+Numerical features(Ratio): These features have numerical values.
+
+-   ApplicantIncome
+    
+-   CoapplicantIncome
+    
+-   LoanAmount
+    
+-   Loan_Amount_Term
+
+## Analysis
+We plan on making two main types of analyses in this project. 
+First to explore the dataset by finding correlations between data (Exploratory Data Analysis) 
+Second we plan to use Regression techniques to predict whether a loan will be paid or not by the applicant
+
+
