@@ -1,67 +1,92 @@
-```{r}
+```{r Loading Libraries and Importing Data}
 library(ggplot2)
 library(mlr)
+library(plyr)
+library(factoextra)
+library(dplyr)
+library(crayon)
 
 train =read.csv("~/Documents/College/Second Year/Semester 2/DS/CP - Loan Prediction System/Data/train.csv",na.strings = c(""," ",NA))
 
 test =read.csv("~/Documents/College/Second Year/Semester 2/DS/CP - Loan Prediction System/Data/test.csv",na.strings = c(""," ",NA))
+
+head(train, 5)
 ```
 
-
-```{r}
+```{r Viewing Distribution of the Target Variable}
 
 # Barplot of applicants previous loan status
-print(barplot(table(train$Loan_Status)))
+barplot(table(train$Loan_Status))
 print(prop.table(table(train$Loan_Status)))
 
 train_no_null = na.omit(train)
 test_no_null = na.omit(test)
-summary(train_no_null)
+
+cat("\n\nSo we see that it is much more likely for an applicant to get accepted (")
+cat(green("68.73%"))
+cat(") than to be rejected (")
+cat(red("31.27%"))
+cat(") in this dataset")
 ```
 
-```{r}
+```{r Understanding Feature Distribution}
+cat(bold("Feature Distribution\n\n"))
+
 # Bar Graph & Ratio of gender in both datasets
-print(prop.table(table(train_no_null$Gender)))
-cat("\n\n")
 barplot(table(train_no_null$Gender),main="Gender Ratio")
 cat("Gender Ratio in Applicants\n")
+print(prop.table(table(train_no_null$Gender)))
+cat("\nMen are", green("4.5 times as likely"), "as women to apply for a role, however whether this affects the results is yet to be seen\n")
+cat("\n__\n\n")
+
 
 # Bar graph and ratio of dependents on applicant
-print(levels(train_no_null$Dependents))
+cat("Ratio of Applicants having Dependants\n")
 barplot(table(train_no_null$Dependents),main="Dependants")
 barplot(table(train_no_null$Married),main="Married")
-cat("Ratio of Applicants having Dependants\n")
-print(prop.table(table(train_no_null$Dependents)))
-cat("\n\n")
+prop.table(table(train_no_null$Dependents))
+cat("\nApplicants mostly have 0 dependants, which might indicate that they are mostly younger married couples (Given that most are married). Another interesting thing to note is that the ratio of applicants having 1 or 2 dependants is very similar\n")
+cat("\n__\n\n")
 
 
 # Bar graph of whether applicant is educated or not
+cat("Education Level of Applicants\n")
 barplot(table(train_no_null$Education),main="Educated")
-cat("Educated or Not\n")
 prop.table(table(train_no_null$Education))
-cat("\n\n")
+cat("\nA significant Level of Applicants (")
+cat(green("~80%"))
+cat(") appear to be graduated. Without the correlations, this feels like it should be significant in determining the applicant's loan status")
+cat("\n__\n\n")
 
 
 # Bar graph of whether applicant is self employed or not
 barplot(table(train_no_null$Self_Employed),main="Self Employed")
 cat("Self employed\n")
 prop.table(table(train_no_null$Self_Employed))
+cat("\nAnother interesting inference that most applicants are self employed, implying that the loan would be used for their start-up or business idea")
 cat("\n\n")
 
+```
+
+```{r Feature Distribution Continued}
+cat(bold("Feature Distribution Continued\n\n"))
 
 # Box plot between Applicant and Coapplicant income
+cat("Applicant and Co-Applicant Incomes\n\n")
 boxplot(train_no_null$ApplicantIncome,train_no_null$CoapplicantIncome,names=c("App Income","Coapp Income"),main="Applicant Income")
-
-
-# Box plot of applicants loan amount for both train_no_null and test_no_null dataset
-boxplot(train_no_null$LoanAmount,main="Loan Amount")
-
+summary(train_no_null$ApplicantIncome)
+cat("\n")
+summary(train_no_null$CoapplicantIncome)
+cat("\nWe can see that Applicant Income has a lot of outliers towards the larger end, with a mean at", green("5852"),"and a maximum at", red("81,000"),"\n")
+cat("\nCoaplicant Income seems to be similarly distributed, just brought back a little\n")
+cat("\n__\n\n")
 
 # Histogram of loan amount term for both train_no_null and test_no_null dataset
 hist(train_no_null$Loan_Amount_Term,breaks=500,main="Loan Amount Term")
-cat("Loan Amount Term\n")
+cat("Loan Amount Term\n\n")
 summary(train_no_null$Loan_Amount_Term)
-cat("\n\n")
+cat("\nMost Loan Amounts appear to be that of a year (360 days) with a few at 180 days and another small percentage at 300. There's also a few values at 6 and 32, which I assume are typos and meant to be 60 and 320 respectively. This we will fix at a later stage.\n")
+cat("\n__\n\n")
 
 
 # Bar graph of credit history for both test_no_null and train_no_null
@@ -69,79 +94,84 @@ train_no_null$Credit_History =as.factor(train_no_null$Credit_History)
 barplot(table(train_no_null$Credit_History),main="Credit History")
 cat("Credit History\n")
 prop.table(table(train_no_null$Credit_History))
-cat("\n\n")
+cat("\nThis variable is... weird.\n")
+cat("\nCredit History is an important variable in predicting a loan, however the one given here is a boolean. Perhaps it's supposed to indicate whether a loan has been succesfully returned in full before?\n")
+cat("\nStill, the distribution seems skewed towards a 1, with", green("85%"), "of applicants having a positive score\n")
+cat("\n__\n\n")
 
 
 # Bar graph for property area
 barplot(table(train_no_null$Property_Area),main="Property Area")
 cat("Ratio of Property Area\n")
 prop.table(table(train_no_null$Property_Area))
+cat("\nNot much to comment on here, most applicants are Semiurban or Urban, but not enough to be a surprise")
 cat("\n\n")
 ```
 
 ```{r Checking Correlations}
+cat(bold("Correlation Checking\n\n"))
+
 train_no_null_numeric = data.frame(sapply(train_no_null,as.numeric))
 test_no_null_numeric = data.frame(sapply(test_no_null, as.numeric))
 
 
-print(ggplot(train_no_null, aes(x=Loan_Status))+geom_bar()+facet_grid(.~Gender)+ggtitle("Loan Status by Gender of Applicant"))
-print(cor(train_no_null_numeric$Loan_Status, train_no_null_numeric$Gender))
+print(ggplot(train_no_null, aes(x=Loan_Status))+geom_bar()+facet_grid(.~Credit_History)+ggtitle("Loan Status by credit history of Applicant"))
+cat("\nCredit History          :", green(abs(cor(train_no_null_numeric$Loan_Status, train_no_null_numeric$Credit_History))))
 
 
 print(ggplot(train_no_null, aes(x=Loan_Status))+geom_bar()+facet_grid(.~Married)+ggtitle("Loan Status by Marital Status of Applicant"))
-print(cor(train_no_null_numeric$Loan_Status, train_no_null_numeric$Married))
-
-
-print(ggplot(train_no_null, aes(x=Loan_Status))+geom_bar()+facet_grid(.~Dependents)+ggtitle("Loan Status by number of Dependents of Applicant"))
-print(cor(train_no_null_numeric$Loan_Status, train_no_null_numeric$Dependents))
-
-
-print(ggplot(train_no_null, aes(x=Loan_Status))+geom_bar()+facet_grid(.~Education)+ggtitle("Loan Status by Education of Applicant"))
-print(cor(train_no_null_numeric$Loan_Status, train_no_null_numeric$Education))
-
-
-print(ggplot(train_no_null, aes(x=Loan_Status))+geom_bar()+facet_grid(.~Self_Employed)+ggtitle("Loan Status by Employment status of Applicant"))
-print(cor(train_no_null_numeric$Loan_Status, train_no_null_numeric$Self_Employed))
-
-
-print(ggplot(train_no_null, aes(x=Loan_Status))+geom_bar()+facet_grid(.~Loan_Amount_Term)+ggtitle("Loan Status by terms  of loan"))
-print(cor(train_no_null_numeric$Loan_Status, train_no_null_numeric$Loan_Amount_Term))
-
-
-print(ggplot(train_no_null, aes(x=Loan_Status))+geom_bar()+facet_grid(.~Credit_History)+ggtitle("Loan Status by credit history of Applicant"))
-print(cor(train_no_null_numeric$Loan_Status, train_no_null_numeric$Credit_History))
-
-
-print(ggplot(train_no_null, aes(x=Loan_Status))+geom_bar()+facet_grid(.~Property_Area)+ggtitle("Loan Status by property area"))
-print(cor(train_no_null_numeric$Loan_Status, train_no_null_numeric$Property_Area))
-
-
-print(ggplot(train_no_null, aes(x=Loan_Status,y=ApplicantIncome))+geom_boxplot()+ggtitle("Loan Status by Applicant income"))
-print(cor(train_no_null_numeric$Loan_Status, train_no_null_numeric$ApplicantIncome))
-
-
-print(ggplot(train_no_null, aes(x=Loan_Status,y=CoapplicantIncome))+geom_boxplot()+ggtitle("Loan Status by coapplicant income"))
-print(cor(train_no_null_numeric$Loan_Status, train_no_null_numeric$CoapplicantIncome))
+cat("\nMarital Status          :", green(abs(cor(train_no_null_numeric$Loan_Status, train_no_null_numeric$Married))))
 
 
 print(ggplot(train_no_null, aes(x=Loan_Status,y=LoanAmount))+geom_boxplot()+ggtitle("Loan Status by Loan Amount"))
-print(cor(train_no_null_numeric$Loan_Status, train_no_null_numeric$LoanAmount))
+cat("\nLoan Amount             :", yellow(abs(cor(train_no_null_numeric$Loan_Status, train_no_null_numeric$LoanAmount))))
 
+
+print(ggplot(train_no_null, aes(x=Loan_Status))+geom_bar()+facet_grid(.~Education)+ggtitle("Loan Status by Education of Applicant"))
+cat("\nEducation of            :", yellow(abs(cor(train_no_null_numeric$Loan_Status, train_no_null_numeric$Education))))
+
+
+print(ggplot(train_no_null, aes(x=Loan_Status))+geom_bar()+facet_grid(.~Gender)+ggtitle("Loan Status by Gender of Applicant"))
+cat("\nGender                  :", yellow(abs(cor(train_no_null_numeric$Loan_Status, train_no_null_numeric$Gender))))
+
+
+print(ggplot(train_no_null, aes(x=Loan_Status,y=CoapplicantIncome))+geom_boxplot()+ggtitle("Loan Status by coapplicant income"))
+cat("\nCo-Applicant Income     :", red(abs(cor(train_no_null_numeric$Loan_Status, train_no_null_numeric$CoapplicantIncome))))
+
+
+print(ggplot(train_no_null, aes(x=Loan_Status,y=ApplicantIncome))+geom_boxplot()+ggtitle("Loan Status by Applicant income"))
+cat("\nApplicant Income        :", red(abs(cor(train_no_null_numeric$Loan_Status, train_no_null_numeric$ApplicantIncome))))
+
+
+print(ggplot(train_no_null, aes(x=Loan_Status))+geom_bar()+facet_grid(.~Dependents)+ggtitle("Loan Status by number of Dependents of Applicant"))
+cat("\nNumber of Dependents    :", red(abs(cor(train_no_null_numeric$Loan_Status, train_no_null_numeric$Dependents))))
+
+
+print(ggplot(train_no_null, aes(x=Loan_Status))+geom_bar()+facet_grid(.~Self_Employed)+ggtitle("Loan Status by Employment status of Applicant"))
+cat("\nEmployment Status       :", red(abs(cor(train_no_null_numeric$Loan_Status, train_no_null_numeric$Self_Employed))))
+
+
+print(ggplot(train_no_null, aes(x=Loan_Status))+geom_bar()+facet_grid(.~Property_Area)+ggtitle("Loan Status by property area"))
+cat("\nRural/Urban             :", red(abs(cor(train_no_null_numeric$Loan_Status, train_no_null_numeric$Property_Area))))
+
+
+print(ggplot(train_no_null, aes(x=Loan_Status))+geom_bar()+facet_grid(.~Loan_Amount_Term)+ggtitle("Loan Status by terms of loan"))
+cat("\nLoan Term               :", red(abs(cor(train_no_null_numeric$Loan_Status, train_no_null_numeric$Loan_Amount_Term))))
+
+cat("\n\nThese results are, not too great and possibly a result of most variables being discrete with a range of 2-3 values. The low correlations also imply that regression might not be the best tool for this particular dataset. A small note of interest is how Co-Applicant Income relates more than Applicant Income, possibly because simply having a Co-Applicant would mean they're married and Marital Status is somewhat correlated to the target variable")
 ```
 
-```{r Create New Dataset}
-library(dplyr)
-library(plyr)
-
+```{r Creating a New Dataset}
 alldata = rbind(train[,2:12],test[,2:12])
 
+# Maybe a useful feature?
 alldata=mutate(alldata,TotalIncome=ApplicantIncome+CoapplicantIncome)
 ```
 
-```{r}
+```{r Impute Missing Values}
 # It seems reasonable to impute marital status as “No” when the coapplicant income is zero, and “Yes”, otherwise
-alldata$Married[is.na(alldata$Married) & alldata$CoapplicantIncome==0]="No"
-alldata$Married[is.na(alldata$Married)]= "Yes"
+alldata$Married[is.na(alldata$Married) & alldata$CoapplicantIncome == 0]="No"
+alldata$Married[is.na(alldata$Married)] = "Yes"
 
 
 # So It looks safe to impute the number of dependents for the unmarried males and females as the mode=0
@@ -149,27 +179,21 @@ alldata$Dependents[is.na(alldata$Dependents) & alldata$Married=="No"]= "0"
 
 
 # As we saw earlier, nearly 86% are not self employed. These missing values will be imputed using the mode =“No”
-alldata2$Self_Employed[is.na(alldata$Self_Employed)] = "No"
-
-alldata2$Credit_History=recode(alldata2$Credit_History,recodes = "NA=2")
-```
-
-Loan_Amount_Term is a bit different
-```{r}
-alldata2$Loan_Amount_Term = as.factor(alldata2$Loan_Amount_Term)
-print(ggplot(data=alldata2,aes(x=Loan_Amount_Term))+geom_bar())
+alldata$Self_Employed[is.na(alldata$Self_Employed)] = "No"
 
 # The vast majority of the loans had a term of 360 months, so I just use this to fill in the missing values. Note that term of 350 occurs only once and it is in the test set. I'll just assume that this was a mistype and should be 360. Similarly, the 6 was probably meant to be 60.
-alldata2$Loan_Amount_Term[is.na(alldata2$Loan_Amount_Term)]="360"
-alldata2$Loan_Amount_Term = recode(alldata2$Loan_Amount_Term,recodes = "'350'='360';'6'='60'")
+alldata$Loan_Amount_Term[is.na(alldata$Loan_Amount_Term)]="360"
+alldata$Loan_Amount_Term = recode(alldata$Loan_Amount_Term,recodes = "'350'='360';'6'='60'")
 ```
 
 ```{r Split Back into Train and Test}
-newtrain <- cbind(Loan_Status=train$Loan_Status,alldata[1:614,])
-newtest <- cbind(alldata[615:981,])
+newtrain = cbind(Loan_Status=train$Loan_Status,alldata[1:614,])
+newtest = cbind(alldata[615:981,])
 
-newtrain = data.frame(sapply(na.omit(newtrain), as.factor))
-newtest = data.frame(sapply(na.omit(newtest), as.numeric))
+newtrain = data.frame(sapply(newtrain, as.numeric))
+newtest = data.frame(sapply(newtest, as.numeric))
+newtrain = na.omit(newtrain)
+newtest = na.omit(newtest)
 
 newtrain$Loan_Status = ifelse(newtrain$Loan_Status == 2, 1, 0)
 newtrain$Gender = ifelse(newtrain$Gender == 1, 0, 1)
@@ -177,88 +201,110 @@ newtrain$Self_Employed = ifelse(newtrain$Self_Employed == 1, 0, 1)
 newtrain$Education = ifelse(newtrain$Education == 1, 0, 1)
 newtrain$Dependents = ifelse(newtrain$Dependents == 1, 0, 1)
 newtrain$Married = ifelse(newtrain$Married == 1, 0, 1)
+
+newtrain
 ```
 
-```{r PCA}
-library(factoextra)
+```{r Principal Component Analysis}
 
-train.pca = prcomp(newtrain, scale = TRUE)
-test.pca = prcomp(newtest, scale = TRUE)
-```
+train.pca = prcomp(newtrain)
+test.pca  = prcomp(newtest)
 
-```{r PCA Visualisation}
 fviz_eig(train.pca, main = "Percentage of Variance")
-
-fviz_pca_ind(train.pca, col.ind = "cos2", repel = TRUE,
-             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"))
 
 fviz_pca_var(train.pca, col.ind = "contrib", repel = TRUE,
              gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"))
 
-```
-```{r Drop the last two columns because they don't show much variance}
+s = summary(train.pca)
 
-train.pca = train.pca$x[,0:11]
-test.pca = test.pca$x[,0:11]
+cat("\n\n\nHence, We require only the first 6 Principal Components to represent ")
+cat(green("97.939%"))
+cat(" of the variance in the dataset.\n")
+
+cat("\nWe also notice that most of the variance (")
+cat(yellow("88.39%"))
+cat(") is defined by the first column.")
+
 ```
 
 ```{r Building a Linear Model}
 
 linear_model = lm(newtrain$Loan_Status ~ newtrain$ApplicantIncome + newtrain$Credit_History + newtrain$CoapplicantIncome + newtrain$Dependents)
-summary(linear_model)
-```
-```{r}
-nums <- sapply(alldata2,class)=="numeric"
-numvars <- alldata2[,nums]
-m<-cor(numvars)
-v<-as.vector(m) 
-id1<- rep(rownames(m),17)
-id2<-as.vector(sapply(rownames(m),function(x)rep(x,17)))
-alldata2<-alldata2[,!(names(alldata2))]
+
+s = summary(linear_model)
+
+cat("With an R-Squared Value of", red(s$r.squared), "the linear regression model is... less than ideal\n")
+
+cat("\nThis is most likely due to most variables being discrete values with a range of 2-4 values, so linear regression is out of question\n")
+
+cat("\nAlso since regression with all the features showing the most correlations being useless, it does not seem worthwhile to use the Principal Components we obtained from the dataset\n")
 ```
 
-```{r}
-newtrain <- cbind(Loan_Status=train$Loan_Status,alldata[1:614,])
+```{r Task Creation for Tree Model}
+newtrain = cbind(Loan_Status=train$Loan_Status,alldata[1:614,])
 
 #bogus Loan status for test set
-Loan_Status <- as.factor(sample(c("N","Y"),replace=TRUE,size=dim(test)[1]))
-newtest <- cbind(Loan_Status,alldata[615:981,])
+Loan_Status = as.factor(sample(c("N","Y"),replace=TRUE,size=dim(test)[1]))
+newtest = cbind(Loan_Status,alldata[615:981,])
+
+newtrain$Loan_Amount_Term[newtrain$Loan_Amount_Term == '350'] = '360'
+newtrain$Loan_Amount_Term[newtrain$Loan_Amount_Term == '6'] = '360'
+newtest$Loan_Amount_Term[newtest$Loan_Amount_Term == '350'] = '360'
+newtest$Loan_Amount_Term[newtest$Loan_Amount_Term == '6'] = '360'
+newtrain$Loan_Amount_Term = as.factor(newtrain$Loan_Amount_Term)
+newtest$Loan_Amount_Term = as.factor(newtest$Loan_Amount_Term)
 
 #create task
-trainTask <- makeClassifTask(data = newtrain,target = "Loan_Status")
-testTask <- makeClassifTask(data = newtest, target = "Loan_Status")
+train.task = makeClassifTask(data = newtrain,target = "Loan_Status")
+test.task = makeClassifTask(data = newtest, target = "Loan_Status")
 
 #normalize the variables
-trainTask <- normalizeFeatures(trainTask,method = "standardize")
-testTask <- normalizeFeatures(testTask,method = "standardize")
+train.task = normalizeFeatures(train.task,method = "standardize")
+test.task = normalizeFeatures(test.task,method = "standardize")
 ```
 
-```{r}
-tree <- makeLearner("classif.rpart", predict.type = "response")
+```{r Building the Decision Tree Model}
+tree = makeLearner("classif.rpart", predict.type = "response")
 
-#set 3 fold cross validation
-set_cv <- makeResampleDesc("CV",iters = 3L)
 
-#Search for hyperparameters
-treepars <- makeParamSet(
-        makeIntegerParam("minsplit",lower = 10, upper = 50),
-        makeIntegerParam("minbucket", lower = 5, upper = 50),
-        makeNumericParam("cp", lower = 0.001, upper = 0.2)
+set_cv = makeResampleDesc("CV",iters = 3L)
+
+
+treepars = makeParamSet(
+    makeIntegerParam("minsplit", lower = 15, upper = 30),
+    makeIntegerParam("minbucket", lower = 15, upper = 30),
+    makeNumericParam("cp", lower = 0.01, upper = 0.2)
 )
 
-#try 100 different combinations of values
-tpcontrol <- makeTuneControlRandom(maxit = 100L)
+tpcontrol = makeTuneControlRandom(maxit = 50L)
 
-#hypertune the parameters
-rm(acc)
-set.seed(11)
-treetune <- tuneParams(learner = tree, resampling = set_cv, 
-      task = trainTask, par.set = treepars, control = tpcontrol, measures = acc)
+set.seed(1)
+treetune = tuneParams(learner = tree, resampling = set_cv, 
+      task = train.task, par.set = treepars, control = tpcontrol, measures = acc)
 treetune
 ```
 
 ```{r}
+library(rattle)
 
+#using hyperparameters for modeling
+tunedtree = setHyperPars(tree, par.vals=treetune$x)
+
+#train the model
+treefit = train(tunedtree, train.task)
+par(mfrow=c(1,1))
+fancyRpartPlot(getLearnerModel(treefit))
+```
+
+```{r}
+
+treepred = predict(treefit, test.task)
+
+#create a submission file
+prediction = data.frame(Loan_ID = test$Loan_ID, Loan_Status = treepred$data$response, Actual = newtest$Loan_Status)
+
+a = ifelse(prediction$Loan_Status == prediction$Actual, 1, 0)
+table(a)
 ```
 
 
