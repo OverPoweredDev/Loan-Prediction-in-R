@@ -1,8 +1,6 @@
 ![loanpred](https://github.com/OverPoweredDev/Loan-Prediction-in-R/blob/main/misc/banner.png)
 
 ![R](https://img.shields.io/badge/R-4.0.3-blue?style=for-the-badge)
-![PR](https://img.shields.io/badge/PRs-welcome-red?style=for-the-badge)
-![Open Source](https://img.shields.io/badge/%20-Open%20Source-blueviolet?style=for-the-badge)
 
 ## Problem Statement
 To automate the loan eligibility process based on customer detail provided while filling online application form. These details are Gender, Education, Income, Marital Status, Loan Amount and others. And to identify the customer segments, which are eligible for loan amount
